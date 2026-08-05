@@ -21,12 +21,12 @@ jobs:
     - name: Unzip project
       run: unzip -o lister-engine-simulator.zip
 
-    - name: Build APK
+    - name: Build APK with Stacktrace
       run: |
-        TARGET_DIR=$(find . -name "build.gradle.kts" -exec dirname {} \; | head -n 1)
+        TARGET_DIR=$(find . -name "build.gradle.kts" -o -name "build.gradle" | head -n 1 | xargs dirname)
         cd "$TARGET_DIR"
         chmod +x gradlew || true
-        gradle assembleDebug --no-daemon -Dksp.incremental=false
+        gradle assembleDebug --stacktrace --no-daemon -x test -x lint
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
