@@ -18,23 +18,23 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Unzip Project & Generate Keystore & Build APK
+    - name: Unzip and Move Files Automatically
       run: |
-        # 1. فك ضغط المشروع
-        unzip -o lister-engine-simulator.zip
+        # 1. فك ضغط الملف بالكامل مع كافة المجلدات والملفات الفرعية
+        unzip -o lister-engine-simulator.zip -d extracted_project
         
-        # 2. الانتقال إلى مجلد المشروع
-        PROJ_DIR=$(find . -maxdepth 3 -name "build.gradle*" -exec dirname {} \; | head -n 1)
-        cd "$PROJ_DIR"
+        # 2. البحث عن المجلد الذي يحتوي على build.gradle أو build.gradle.kts
+        TARGET_DIR=$(find extracted_project -name "build.gradle" -o -name "build.gradle.kts" | head -n 1 | xargs dirname)
         
-        # 3. إنشاء مفتاح keystore وهمي لحل مشكلة التوقيع المفقود
-        mkdir -p app
-        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+        # 3. نقل كافة المحتويات إلى المجلد الرئيسي للمستودع
+        cp -r $TARGET_DIR/* .
         
-        # 4. بناء الـ APK
-        gradle wrapper
+        # 4. تجهيز صلاحديات التشغيل والـ Wrapper
+        gradle wrapper --gradle-version 8.2
         chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon -Dksp.incremental=false
+
+    - name: Build APK
+      run: ./gradlew assembleDebug --no-daemon -x test -x lint
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
