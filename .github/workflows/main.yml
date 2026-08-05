@@ -18,23 +18,25 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Unzip and Move Files Automatically
+    - name: Setup Project & Keystore & Build
       run: |
-        # 1. فك ضغط الملف بالكامل مع كافة المجلدات والملفات الفرعية
+        # 1. فك ضغط الملف وتحديد مجلد المشروع
         unzip -o lister-engine-simulator.zip -d extracted_project
-        
-        # 2. البحث عن المجلد الذي يحتوي على build.gradle أو build.gradle.kts
         TARGET_DIR=$(find extracted_project -name "build.gradle" -o -name "build.gradle.kts" | head -n 1 | xargs dirname)
         
-        # 3. نقل كافة المحتويات إلى المجلد الرئيسي للمستودع
+        # 2. نقل جميع الملفات للجذر
         cp -r $TARGET_DIR/* .
         
-        # 4. تجهيز صلاحديات التشغيل والـ Wrapper
+        # 3. إنشاء مفتاح debug.keystore المفقود تلقائياً في كل الأماكن المحتملة
+        mkdir -p app
+        mkdir -p ~/.android
+        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+        cp app/debug.keystore ~/.android/debug.keystore || true
+        
+        # 4. بناء الـ Wrapper وتشغيل التجميع
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
-
-    - name: Build APK
-      run: ./gradlew assembleDebug --no-daemon -x test -x lint
+        ./gradlew assembleDebug --no-daemon -x test -x lint -Dksp.incremental=false
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
