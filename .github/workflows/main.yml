@@ -18,16 +18,20 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Unzip project & Auto Build
+    - name: Unzip Project & Generate Keystore & Build APK
       run: |
-        # 1. فك ضغط الملف
+        # 1. فك ضغط المشروع
         unzip -o lister-engine-simulator.zip
         
-        # 2. البحث عن مجلد المشروع والانتقال إليه
+        # 2. الانتقال إلى مجلد المشروع
         PROJ_DIR=$(find . -maxdepth 3 -name "build.gradle*" -exec dirname {} \; | head -n 1)
         cd "$PROJ_DIR"
         
-        # 3. إنشاء ملفات التشغيل تلقائياً وتجميع الـ APK
+        # 3. إنشاء مفتاح keystore وهمي لحل مشكلة التوقيع المفقود
+        mkdir -p app
+        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+        
+        # 4. بناء الـ APK
         gradle wrapper
         chmod +x gradlew
         ./gradlew assembleDebug --no-daemon -Dksp.incremental=false
