@@ -12,37 +12,34 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up JDK 17
+    - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
 
-    - name: Setup Project & Hidden Files & Build
+    - name: Setup Project & Build
       run: |
-        # 1. فك ضغط الملف وتحديد مجلد المشروع
+        # 1. فك ضغط الملف
         unzip -o lister-engine-simulator.zip -d extracted_project
         TARGET_DIR=$(find extracted_project -name "build.gradle" -o -name "build.gradle.kts" | head -n 1 | xargs dirname)
         
-        # 2. تفعيل نقل الملفات المخفية ونقل كل شيء للجذر
+        # 2. نقل الملفات
         shopt -s dotglob
         cp -r $TARGET_DIR/* .
         
-        # 3. إنشاء ملفات البيئة المفقودة (.env) لمنع خطأ الاختفاء
+        # 3. إنشاء الملفات والمفاتيح المفقودة
         touch .env || true
         touch app/.env || true
         touch app/.env.example || true
-        
-        # 4. إنشاء مفتاح التوقيع
-        mkdir -p app
-        mkdir -p ~/.android
+        mkdir -p app ~/.android
         keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
         cp app/debug.keystore ~/.android/debug.keystore || true
         
-        # 5. التجميع والتجاوز
-        gradle wrapper --gradle-version 8.2
+        # 4. التجميع مع إيقاف الـ Cache لتجنب خطأ الـ JAR
+        gradle wrapper
         chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon -x test -x lint -Dksp.incremental=false
+        ./gradlew assembleDebug --no-daemon --no-build-cache -x test -x lint
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
