@@ -21,20 +21,18 @@ jobs:
     - name: Unzip project
       run: unzip -o lister-engine-simulator.zip
 
-    - name: Bypass KSP Crash and Build APK
+    - name: Setup Gradle Wrapper & Build
       run: |
         TARGET_DIR=$(find . -name "build.gradle.kts" -exec dirname {} \; | head -n 1)
         cd "$TARGET_DIR"
-        
-        # تعطيل خاصية كاش KSP لمنع التضارب
-        mkdir -p ~/.gradle
-        echo "org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
-        echo "ksp.incremental=false" >> gradle.properties
-        
-        # البناء بدون الخيارات المتصارعة
-        gradle assembleDebug --no-daemon -x test
+
+        # إنشاء Wrapper يدوي لضمان توافق البيئة
+        gradle wrapper --gradle-version 8.1.1
+
+        # تنظيف البناء القديم ثم التجميع
+        ./gradlew clean assembleDebug --no-daemon --stacktrace
       env:
-        JAVA_OPTS: "-Dksp.incremental=false"
+        JAVA_HOME: $JAVA_HOME_17_X64
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
