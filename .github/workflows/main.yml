@@ -18,15 +18,19 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Unzip project
-      run: unzip -o lister-engine-simulator.zip
-
-    - name: Build APK with Stacktrace
+    - name: Unzip project & Auto Build
       run: |
-        TARGET_DIR=$(find . -name "build.gradle.kts" -o -name "build.gradle" | head -n 1 | xargs dirname)
-        cd "$TARGET_DIR"
-        chmod +x gradlew || true
-        gradle assembleDebug --stacktrace --no-daemon -x test -x lint
+        # 1. فك ضغط الملف
+        unzip -o lister-engine-simulator.zip
+        
+        # 2. البحث عن مجلد المشروع والانتقال إليه
+        PROJ_DIR=$(find . -maxdepth 3 -name "build.gradle*" -exec dirname {} \; | head -n 1)
+        cd "$PROJ_DIR"
+        
+        # 3. إنشاء ملفات التشغيل تلقائياً وتجميع الـ APK
+        gradle wrapper
+        chmod +x gradlew
+        ./gradlew assembleDebug --no-daemon -Dksp.incremental=false
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
