@@ -18,22 +18,28 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Project & Keystore & Build
+    - name: Setup Project & Hidden Files & Build
       run: |
         # 1. فك ضغط الملف وتحديد مجلد المشروع
         unzip -o lister-engine-simulator.zip -d extracted_project
         TARGET_DIR=$(find extracted_project -name "build.gradle" -o -name "build.gradle.kts" | head -n 1 | xargs dirname)
         
-        # 2. نقل جميع الملفات للجذر
+        # 2. تفعيل نقل الملفات المخفية ونقل كل شيء للجذر
+        shopt -s dotglob
         cp -r $TARGET_DIR/* .
         
-        # 3. إنشاء مفتاح debug.keystore المفقود تلقائياً في كل الأماكن المحتملة
+        # 3. إنشاء ملفات البيئة المفقودة (.env) لمنع خطأ الاختفاء
+        touch .env || true
+        touch app/.env || true
+        touch app/.env.example || true
+        
+        # 4. إنشاء مفتاح التوقيع
         mkdir -p app
         mkdir -p ~/.android
         keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
         cp app/debug.keystore ~/.android/debug.keystore || true
         
-        # 4. بناء الـ Wrapper وتشغيل التجميع
+        # 5. التجميع والتجاوز
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
         ./gradlew assembleDebug --no-daemon -x test -x lint -Dksp.incremental=false
